@@ -1,19 +1,38 @@
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
 
-class AddRecipePage extends StatefulWidget {
-  const AddRecipePage({super.key});
+class EditRecipePage extends StatefulWidget {
+  final Recipe recipe;
+
+  const EditRecipePage({super.key, required this.recipe});
 
   @override
-  State<AddRecipePage> createState() => _AddRecipePageState();
+  State<EditRecipePage> createState() => _EditRecipePageState();
 }
 
-class _AddRecipePageState extends State<AddRecipePage> {
+class _EditRecipePageState extends State<EditRecipePage> {
   final _formKey = GlobalKey<FormState>();
-  final nameController = TextEditingController();
-  final cookTimeController = TextEditingController();
-  final ingredientsController = TextEditingController();
-  final stepsController = TextEditingController();
+  late TextEditingController nameController;
+  late TextEditingController cookTimeController;
+  late TextEditingController ingredientsController;
+  late TextEditingController stepsController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Parse cook time to remove " menit" suffix if exists
+    String cookTime = widget.recipe.cookTime;
+    if (cookTime.endsWith(' menit')) {
+      cookTime = cookTime.replaceAll(' menit', '');
+    }
+
+    nameController = TextEditingController(text: widget.recipe.name);
+    cookTimeController = TextEditingController(text: cookTime);
+    ingredientsController = TextEditingController(
+      text: widget.recipe.ingredients,
+    );
+    stepsController = TextEditingController(text: widget.recipe.steps);
+  }
 
   @override
   void dispose() {
@@ -27,31 +46,30 @@ class _AddRecipePageState extends State<AddRecipePage> {
   void _saveRecipe() {
     if (!_formKey.currentState!.validate()) return;
 
-    final newRecipe = Recipe(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    final updatedRecipe = Recipe(
+      id: widget.recipe.id,
       name: nameController.text.trim(),
       cookTime: '${cookTimeController.text.trim()} menit',
-      imagePath: null, // User-created recipes don't have asset images
+      imagePath: widget.recipe.imagePath, // Keep original image
       ingredients: ingredientsController.text.trim(),
       steps: stepsController.text.trim(),
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Resep berhasil ditambahkan!"),
+        content: Text("Resep berhasil diperbarui!"),
         backgroundColor: Colors.green,
       ),
     );
 
-    // Return the new recipe to HomePage
-    Navigator.pop(context, newRecipe);
+    Navigator.pop(context, updatedRecipe);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Tambah Resep"),
+        title: const Text("Edit Resep"),
         backgroundColor: Colors.orange,
         centerTitle: true,
       ),
@@ -62,7 +80,7 @@ class _AddRecipePageState extends State<AddRecipePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // IMAGE PICKER (DUMMY)
+              // IMAGE PREVIEW
               Container(
                 height: 180,
                 width: double.infinity,
@@ -70,16 +88,28 @@ class _AddRecipePageState extends State<AddRecipePage> {
                   color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.camera_alt, size: 40),
-                      SizedBox(height: 8),
-                      Text("Tambah Foto Makanan"),
-                    ],
-                  ),
-                ),
+                child: widget.recipe.imagePath != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(
+                          widget.recipe.imagePath!,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.restaurant,
+                              size: 50,
+                              color: Colors.orange,
+                            ),
+                            SizedBox(height: 8),
+                            Text("Tidak ada gambar"),
+                          ],
+                        ),
+                      ),
               ),
 
               const SizedBox(height: 20),
@@ -126,8 +156,6 @@ class _AddRecipePageState extends State<AddRecipePage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                validator: (v) =>
-                    v!.isEmpty ? "Bahan tidak boleh kosong" : null,
               ),
 
               const SizedBox(height: 16),
@@ -143,8 +171,6 @@ class _AddRecipePageState extends State<AddRecipePage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                validator: (v) =>
-                    v!.isEmpty ? "Langkah tidak boleh kosong" : null,
               ),
 
               const SizedBox(height: 30),
@@ -162,7 +188,7 @@ class _AddRecipePageState extends State<AddRecipePage> {
                   ),
                   onPressed: _saveRecipe,
                   child: const Text(
-                    "SIMPAN RESEP",
+                    "SIMPAN PERUBAHAN",
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
